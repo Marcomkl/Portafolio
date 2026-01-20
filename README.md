@@ -72,5 +72,4 @@ Marco Antonio Chaicoski
 Frontend Developer Junior
 GitHub: https://github.com/Marcomkl
 LinkedIn: https://www.linkedin.com/in/marco-antonio-chaicoski/
-LinkedIn: https://www.linkedin.com/in/marco-antonio-chaicoski/
 
