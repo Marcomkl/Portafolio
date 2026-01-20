@@ -1,0 +1,572 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POPEYE - Ropa Masculina con Estilo</title>
+  
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#1a365d', // Azul oscuro elegante
+            secondary: '#e53e3e', // Rojo para acentos
+            accent: '#2d3748',   // Gris oscuro
+            light: '#f7fafc',    // Fondo claro
+            highlight: '#fbbf24' // Amarillo para destacar
+          },
+          fontFamily: {
+            'sans': ['Inter', 'system-ui', 'sans-serif'],
+            'display': ['Poppins', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Alpine.js -->
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+  
+  <style>
+    /* Estilos personalizados */
+    .hero-gradient {
+      background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);
+    }
+    
+    .product-card {
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+    
+    .product-card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+    
+    .product-image {
+      transition: transform 0.5s ease;
+    }
+    
+    .product-card:hover .product-image {
+      transform: scale(1.05);
+    }
+    
+    .nav-link {
+      position: relative;
+    }
+    
+    .nav-link::after {
+      content: '';
+      position: absolute;
+      bottom: -5px;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background-color: #e53e3e;
+      transition: width 0.3s ease;
+    }
+    
+    .nav-link:hover::after {
+      width: 100%;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);
+      transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-secondary {
+      background: #e53e3e;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-secondary:hover {
+      background: #c53030;
+      transform: translateY(-2px);
+    }
+    
+    .section-title {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .section-title::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      left: 0;
+      width: 60%;
+      height: 3px;
+      background-color: #e53e3e;
+    }
+    
+    .discount-badge {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: #e53e3e;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    .cart-badge {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      background: #e53e3e;
+      color: white;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    
+    /* Animaciones */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .fade-in {
+      animation: fadeIn 0.5s ease forwards;
+    }
+    
+    .stagger-animation > * {
+      opacity: 0;
+      animation: fadeIn 0.5s ease forwards;
+    }
+    
+    .stagger-animation > *:nth-child(1) { animation-delay: 0.1s; }
+    .stagger-animation > *:nth-child(2) { animation-delay: 0.2s; }
+    .stagger-animation > *:nth-child(3) { animation-delay: 0.3s; }
+    .stagger-animation > *:nth-child(4) { animation-delay: 0.4s; }
+    .stagger-animation > *:nth-child(5) { animation-delay: 0.5s; }
+    .stagger-animation > *:nth-child(6) { animation-delay: 0.6s; }
+    .stagger-animation > *:nth-child(7) { animation-delay: 0.7s; }
+    .stagger-animation > *:nth-child(8) { animation-delay: 0.8s; }
+  </style>
+</head>
+
+<body class="bg-light font-sans text-accent" x-data="appData()">
+  <!-- Header simplificado -->
+  <header class="bg-white shadow-sm sticky top-0 z-40">
+    <div class="container mx-auto px-4 py-3">
+      <div class="flex items-center justify-between">
+        <!-- Logo -->
+        <div class="flex items-center">
+          <a href="#" class="flex items-center space-x-2">
+            <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+              <i class="fas fa-anchor text-white text-lg"></i>
+            </div>
+            <span class="text-xl font-display font-bold text-primary">POPEYE</span>
+          </a>
+        </div>
+        
+        <!-- Navegación principal -->
+        <nav class="hidden md:flex items-center space-x-8">
+          <a href="#" class="nav-link font-medium text-accent hover:text-primary">Inicio</a>
+          <a href="#products" class="nav-link font-medium text-accent hover:text-primary">Productos</a>
+          <a href="#" class="nav-link font-medium text-accent hover:text-primary">Nueva Colección</a>
+          <a href="#" class="nav-link font-medium text-accent hover:text-primary">Ofertas</a>
+        </nav>
+        
+        <!-- Acciones de usuario -->
+        <div class="flex items-center space-x-4">
+          <!-- Buscador simplificado -->
+          <button class="text-accent hover:text-primary transition-colors">
+            <i class="fas fa-search"></i>
+          </button>
+          
+          <!-- Carrito -->
+          <button class="relative text-accent hover:text-primary transition-colors">
+            <i class="fas fa-shopping-bag text-xl"></i>
+            <span x-show="cart.items.length > 0" class="cart-badge" x-text="cart.items.length"></span>
+          </button>
+          
+          <!-- Usuario -->
+          <button class="text-accent hover:text-primary transition-colors">
+            <i class="fas fa-user text-xl"></i>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section rediseñada -->
+  <section class="hero-gradient text-white py-16 md:py-24">
+    <div class="container mx-auto px-4">
+      <div class="flex flex-col md:flex-row items-center">
+        <div class="md:w-1/2 mb-10 md:mb-0 fade-in">
+          <h1 class="text-4xl md:text-5xl lg:text-6xl font-display font-bold mb-6 leading-tight">
+            Estilo que <span class="text-highlight">defines</span>, calidad que <span class="text-highlight">confías</span>
+          </h1>
+          <p class="text-xl mb-8 opacity-90 max-w-lg">
+            Descubre nuestra nueva colección de ropa masculina. Diseños únicos, materiales premium y comodidad inigualable.
+          </p>
+          <div class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+            <a href="#products" class="btn-primary text-white py-3 px-8 rounded-full font-medium text-center">
+              Explorar Colección
+            </a>
+            <a href="#" class="border border-white text-white py-3 px-8 rounded-full font-medium text-center hover:bg-white hover:text-primary transition-colors">
+              Ver Ofertas
+            </a>
+          </div>
+        </div>
+        <div class="md:w-1/2 flex justify-center fade-in">
+          <div class="relative">
+            <div class="w-80 h-80 bg-highlight rounded-full opacity-20 absolute -top-10 -left-10"></div>
+            <div class="w-80 h-80 bg-secondary rounded-full opacity-20 absolute -bottom-10 -right-10"></div>
+            <img src="https://images.unsplash.com/photo-1552374196-1ab2a1c593e8?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=687&q=80" 
+                 alt="Modelo con ropa de la colección" 
+                 class="relative z-10 rounded-lg shadow-2xl w-full max-w-md">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Categorías destacadas -->
+  <section class="py-12 bg-white">
+    <div class="container mx-auto px-4">
+      <h2 class="section-title text-3xl font-display font-bold text-primary mb-12 text-center">Categorías Destacadas</h2>
+      
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6 stagger-animation">
+        <a href="#" class="group">
+          <div class="bg-light rounded-xl p-6 text-center transition-all duration-300 group-hover:shadow-lg group-hover:-translate-y-2">
+            <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-secondary transition-colors">
+              <i class="fas fa-tshirt text-white text-xl"></i>
+            </div>
+            <h3 class="font-semibold text-lg text-accent group-hover:text-primary">Remeras</h3>
+            <p class="text-sm text-gray-500 mt-2">Diseños únicos</p>
+          </div>
+        </a>
+        
+        <a href="#" class="group">
+          <div class="bg-light rounded-xl p-6 text-center transition-all duration-300 group-hover:shadow-lg group-hover:-translate-y-2">
+            <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-secondary transition-colors">
+              <i class="fas fa-hoodie text-white text-xl"></i>
+            </div>
+            <h3 class="font-semibold text-lg text-accent group-hover:text-primary">Buzos</h3>
+            <p class="text-sm text-gray-500 mt-2">Confort máximo</p>
+          </div>
+        </a>
+        
+        <a href="#" class="group">
+          <div class="bg-light rounded-xl p-6 text-center transition-all duration-300 group-hover:shadow-lg group-hover:-translate-y-2">
+            <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-secondary transition-colors">
+              <i class="fas fa-shoe-prints text-white text-xl"></i>
+            </div>
+            <h3 class="font-semibold text-lg text-accent group-hover:text-primary">Zapatillas</h3>
+            <p class="text-sm text-gray-500 mt-2">Estilo y comodidad</p>
+          </div>
+        </a>
+        
+        <a href="#" class="group">
+          <div class="bg-light rounded-xl p-6 text-center transition-all duration-300 group-hover:shadow-lg group-hover:-translate-y-2">
+            <div class="w-16 h-16 bg-primary rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-secondary transition-colors">
+              <i class="fas fa-vest text-white text-xl"></i>
+            </div>
+            <h3 class="font-semibold text-lg text-accent group-hover:text-primary">Accesorios</h3>
+            <p class="text-sm text-gray-500 mt-2">Completa tu look</p>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Productos destacados -->
+  <section id="products" class="py-16 bg-light">
+    <div class="container mx-auto px-4">
+      <div class="flex flex-col md:flex-row justify-between items-center mb-12">
+        <h2 class="section-title text-3xl font-display font-bold text-primary mb-4 md:mb-0">Productos Destacados</h2>
+        <div class="flex space-x-2">
+          <button class="px-4 py-2 bg-white rounded-lg text-accent font-medium shadow-sm hover:shadow-md transition-shadow">Todos</button>
+          <button class="px-4 py-2 bg-white rounded-lg text-accent font-medium shadow-sm hover:shadow-md transition-shadow">Nuevos</button>
+          <button class="px-4 py-2 bg-white rounded-lg text-accent font-medium shadow-sm hover:shadow-md transition-shadow">Populares</button>
+          <button class="px-4 py-2 bg-secondary text-white rounded-lg font-medium shadow-sm hover:shadow-md transition-shadow">Ofertas</button>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 stagger-animation">
+        <!-- Producto 1 -->
+        <div class="product-card bg-white rounded-xl overflow-hidden">
+          <div class="relative overflow-hidden">
+            <img src="https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=880&q=80" 
+                 alt="Remera básica negra" 
+                 class="w-full h-64 object-cover product-image">
+            <div class="discount-badge">-20%</div>
+            <button class="absolute bottom-4 right-4 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-primary hover:text-white transition-colors">
+              <i class="fas fa-shopping-bag"></i>
+            </button>
+          </div>
+          <div class="p-4">
+            <h3 class="font-semibold text-lg text-accent mb-1">Remera Básica Negra</h3>
+            <p class="text-gray-500 text-sm mb-3">Algodón 100% premium</p>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="text-xl font-bold text-primary">$24.99</span>
+                <span class="text-sm text-gray-500 line-through">$31.99</span>
+              </div>
+              <div class="flex items-center text-yellow-400">
+                <i class="fas fa-star"></i>
+                <span class="ml-1 text-sm text-gray-600">4.8</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Producto 2 -->
+        <div class="product-card bg-white rounded-xl overflow-hidden">
+          <div class="relative overflow-hidden">
+            <img src="https://images.unsplash.com/photo-1556821840-3a63f95609a7?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=687&q=80" 
+                 alt="Buzo con capucha gris" 
+                 class="w-full h-64 object-cover product-image">
+            <button class="absolute bottom-4 right-4 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-primary hover:text-white transition-colors">
+              <i class="fas fa-shopping-bag"></i>
+            </button>
+          </div>
+          <div class="p-4">
+            <h3 class="font-semibold text-lg text-accent mb-1">Buzo con Capucha Gris</h3>
+            <p class="text-gray-500 text-sm mb-3">Algodón y poliéster</p>
+            <div class="flex items-center justify-between">
+              <span class="text-xl font-bold text-primary">$49.99</span>
+              <div class="flex items-center text-yellow-400">
+                <i class="fas fa-star"></i>
+                <span class="ml-1 text-sm text-gray-600">4.9</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Producto 3 -->
+        <div class="product-card bg-white rounded-xl overflow-hidden">
+          <div class="relative overflow-hidden">
+            <img src="https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=764&q=80" 
+                 alt="Zapatillas deportivas" 
+                 class="w-full h-64 object-cover product-image">
+            <div class="discount-badge">-15%</div>
+            <button class="absolute bottom-4 right-4 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-primary hover:text-white transition-colors">
+              <i class="fas fa-shopping-bag"></i>
+            </button>
+          </div>
+          <div class="p-4">
+            <h3 class="font-semibold text-lg text-accent mb-1">Zapatillas Urbanas</h3>
+            <p class="text-gray-500 text-sm mb-3">Comodidad y estilo</p>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="text-xl font-bold text-primary">$79.99</span>
+                <span class="text-sm text-gray-500 line-through">$94.99</span>
+              </div>
+              <div class="flex items-center text-yellow-400">
+                <i class="fas fa-star"></i>
+                <span class="ml-1 text-sm text-gray-600">4.7</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Producto 4 -->
+        <div class="product-card bg-white rounded-xl overflow-hidden">
+          <div class="relative overflow-hidden">
+            <img src="https://images.unsplash.com/photo-1591047139829-d91aecb6caea?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=736&q=80" 
+                 alt="Jeans clásicos" 
+                 class="w-full h-64 object-cover product-image">
+            <button class="absolute bottom-4 right-4 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md hover:bg-primary hover:text-white transition-colors">
+              <i class="fas fa-shopping-bag"></i>
+            </button>
+          </div>
+          <div class="p-4">
+            <h3 class="font-semibold text-lg text-accent mb-1">Jeans Clásicos Azules</h3>
+            <p class="text-gray-500 text-sm mb-3">Denim de alta calidad</p>
+            <div class="flex items-center justify-between">
+              <span class="text-xl font-bold text-primary">$59.99</span>
+              <div class="flex items-center text-yellow-400">
+                <i class="fas fa-star"></i>
+                <span class="ml-1 text-sm text-gray-600">4.6</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="text-center mt-12">
+        <a href="#" class="btn-primary text-white py-3 px-8 rounded-full font-medium inline-flex items-center">
+          Ver Todos los Productos
+          <i class="fas fa-arrow-right ml-2"></i>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Beneficios -->
+  <section class="py-16 bg-white">
+    <div class="container mx-auto px-4">
+      <h2 class="section-title text-3xl font-display font-bold text-primary mb-12 text-center">¿Por Qué Elegirnos?</h2>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 stagger-animation">
+        <div class="text-center">
+          <div class="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fas fa-truck text-white text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold text-accent mb-4">Envío Rápido y Gratis</h3>
+          <p class="text-gray-600">Recibe tus pedidos en 24-48 horas con envío gratis en compras superiores a $50.</p>
+        </div>
+        
+        <div class="text-center">
+          <div class="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fas fa-undo-alt text-white text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold text-accent mb-4">Devoluciones Fáciles</h3>
+          <p class="text-gray-600">30 días para devoluciones sin complicaciones si no estás satisfecho.</p>
+        </div>
+        
+        <div class="text-center">
+          <div class="w-20 h-20 bg-primary rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fas fa-award text-white text-2xl"></i>
+          </div>
+          <h3 class="text-xl font-semibold text-accent mb-4">Calidad Garantizada</h3>
+          <p class="text-gray-600">Productos de alta calidad con materiales premium y acabados perfectos.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Newsletter -->
+  <section class="py-16 bg-primary text-white">
+    <div class="container mx-auto px-4 text-center">
+      <h2 class="text-3xl font-display font-bold mb-4">Únete a la Comunidad Popeye</h2>
+      <p class="text-xl opacity-90 max-w-2xl mx-auto mb-8">
+        Recibe ofertas exclusivas, novedades de productos y consejos de estilo directamente en tu correo.
+      </p>
+      <div class="max-w-md mx-auto flex">
+        <input type="email" placeholder="Tu correo electrónico" class="flex-1 py-3 px-4 rounded-l-lg text-accent focus:outline-none">
+        <button class="btn-secondary py-3 px-6 rounded-r-lg font-medium">
+          Suscribirse
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-accent text-white py-12">
+    <div class="container mx-auto px-4">
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div>
+          <div class="flex items-center space-x-2 mb-4">
+            <div class="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+              <i class="fas fa-anchor text-primary text-sm"></i>
+            </div>
+            <span class="text-xl font-display font-bold">POPEYE</span>
+          </div>
+          <p class="text-gray-300 mb-4">
+            Tu destino para la moda masculina más exclusiva. Calidad, estilo y comodidad en cada prenda.
+          </p>
+          <div class="flex space-x-4">
+            <a href="#" class="text-gray-300 hover:text-white transition-colors">
+              <i class="fab fa-facebook-f"></i>
+            </a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors">
+              <i class="fab fa-instagram"></i>
+            </a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors">
+              <i class="fab fa-twitter"></i>
+            </a>
+            <a href="#" class="text-gray-300 hover:text-white transition-colors">
+              <i class="fab fa-tiktok"></i>
+            </a>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="text-lg font-semibold mb-4">Enlaces Rápidos</h3>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Inicio</a></li>
+            <li><a href="#products" class="text-gray-300 hover:text-white transition-colors">Productos</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Nueva Colección</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Ofertas</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Contacto</a></li>
+          </ul>
+        </div>
+        
+        <div>
+          <h3 class="text-lg font-semibold mb-4">Sucursales</h3>
+          <div class="space-y-3">
+            <div>
+              <p class="font-medium">Popeye Maipu</p>
+              <p class="text-gray-300 text-sm">AV. MAIPU 1786</p>
+              <p class="text-gray-300 text-sm">3764-123456</p>
+            </div>
+            <div>
+              <p class="font-medium">Popeye La Rioja</p>
+              <p class="text-gray-300 text-sm">LA RIOJA 1778</p>
+              <p class="text-gray-300 text-sm">3764-654321</p>
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="text-lg font-semibold mb-4">Atención al Cliente</h3>
+          <ul class="space-y-2">
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Preguntas Frecuentes</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Envíos y Entregas</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Devoluciones</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Términos y Condiciones</a></li>
+            <li><a href="#" class="text-gray-300 hover:text-white transition-colors">Política de Privacidad</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="border-t border-gray-700 mt-8 pt-6 text-center text-gray-400">
+        <p>&copy; 2024 POPEYE. Todos los derechos reservados.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    function appData() {
+      return {
+        // Datos de ejemplo para funcionalidad básica
+        cart: {
+          items: [
+            // Ejemplo de items en el carrito
+            // { id: 1, name: 'Remera Básica Negra', price: 24.99, quantity: 1, image: '...' }
+          ]
+        },
+        
+        // Funcionalidades básicas que puedes expandir
+        addToCart(product) {
+          // Lógica para agregar al carrito
+          console.log('Agregar al carrito:', product);
+          // Aquí puedes implementar la lógica real
+        },
+        
+        // Otras funciones que necesites
+      }
+    }
+  </script>
+</body>
+</html>
+

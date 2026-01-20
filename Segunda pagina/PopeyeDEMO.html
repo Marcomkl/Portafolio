@@ -1,0 +1,1616 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TIENDA POPEYE - Ropa de Moda</title>
+  
+  <!-- TailwindCSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#87CEEB',
+            secondary: '#FFFFFF',
+            accent: '#1E3A8A',
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Alpine.js -->
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js" defer></script>
+  
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+    }
+    
+    .logo-font {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 700;
+    }
+    
+    .hero {
+      background-image: linear-gradient(rgba(135, 206, 235, 0.7), rgba(255, 255, 255, 0.7)), 
+                        url('https://cdn.pixabay.com/photo/2016/11/22/19/08/hangers-1850082_1280.jpg');
+      background-size: cover;
+      background-position: center;
+    }
+    
+    .product-card:hover {
+      transform: translateY(-5px);
+      transition: transform 0.3s ease;
+    }
+    
+    .cart-drawer {
+      transition: transform 0.3s ease-in-out;
+    }
+    
+    .cart-drawer.open {
+      transform: translateX(0) !important;
+    }
+    
+    .cart-drawer.closed {
+      transform: translateX(100%) !important;
+    }
+    
+    .toast {
+      position: fixed;
+      right: 20px;
+      bottom: 20px;
+      padding: 15px 20px;
+      border-radius: 4px;
+      z-index: 1000;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .toast.success {
+      background-color: #10B981;
+      color: white;
+    }
+    
+    .toast.error {
+      background-color: #EF4444;
+      color: white;
+    }
+    
+    .loading-spinner {
+      border: 4px solid rgba(0, 0, 0, 0.1);
+      border-left: 4px solid #87CEEB;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+
+<body class="bg-gray-50" x-data="appData()">
+  <!-- Toast Notifications -->
+  <div x-show="toast.visible" 
+       x-transition:enter="transition ease-out duration-300"
+       x-transition:enter-start="opacity-0 transform scale-90"
+       x-transition:enter-end="opacity-100 transform scale-100"
+       x-transition:leave="transition ease-in duration-300"
+       x-transition:leave-start="opacity-100 transform scale-100"
+       x-transition:leave-end="opacity-0 transform scale-90"
+       :class="`toast ${toast.type}`" 
+       @click="toast.visible = false">
+    <span x-text="toast.message"></span>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div x-show="loading" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+    <div class="bg-white p-5 rounded-lg flex flex-col items-center">
+      <div class="loading-spinner mb-3"></div>
+      <p class="text-gray-700">Cargando...</p>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="bg-primary shadow-md">
+    <div class="container mx-auto px-4 py-4">
+      <div class="flex flex-col md:flex-row items-center justify-between">
+        <div class="flex items-center mb-4 md:mb-0">
+          <h1 class="text-3xl font-bold text-accent logo-font">
+            <i class="fas fa-anchor mr-2"></i> TIENDA POPEYE
+          </h1>
+        </div>
+        
+        <div class="flex-1 mx-4 max-w-md">
+          <div class="relative">
+            <input 
+              type="text" 
+              placeholder="Buscar productos..." 
+              x-model="searchTerm"
+              @input="performSearch()"
+              class="w-full px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-accent"
+            >
+            <button @click="performSearch()" class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-accent">
+              <i class="fas fa-search"></i>
+            </button>
+          </div>
+        </div>
+        
+        <div class="flex items-center space-x-4">
+          <button @click="toggleCart()" class="relative text-accent hover:text-accent/80">
+            <i class="fas fa-shopping-cart text-xl"></i>
+            <span x-show="cart.items.length > 0" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs" x-text="cart.items.length"></span>
+          </button>
+          
+          <template x-if="!currentUser">
+            <button @click="showLoginModal = true" class="bg-accent hover:bg-accent/80 text-white px-4 py-2 rounded-md transition duration-300 flex items-center">
+              <i class="fas fa-user mr-2"></i> Iniciar Sesión
+            </button>
+          </template>
+          
+          <template x-if="currentUser">
+            <div class="relative" x-data="{ dropdownOpen: false }">
+              <button @click="dropdownOpen = !dropdownOpen" class="flex items-center space-x-2 focus:outline-none">
+                <span class="text-accent" x-text="currentUser.email"></span>
+                <i class="fas fa-chevron-down text-accent"></i>
+              </button>
+              
+              <div x-show="dropdownOpen" 
+                   @click.away="dropdownOpen = false"
+                   class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
+                <template x-if="isAdmin">
+                  <a href="javascript:void(0)" @click="showAdminPanel(); dropdownOpen = false" class="block px-4 py-2 text-gray-800 hover:bg-primary">
+                    Panel de Administración
+                  </a>
+                </template>
+                <a href="javascript:void(0)" @click="showProfile(); dropdownOpen = false" class="block px-4 py-2 text-gray-800 hover:bg-primary">
+                  Mi Perfil
+                </a>
+                <a href="javascript:void(0)" @click="logout(); dropdownOpen = false" class="block px-4 py-2 text-gray-800 hover:bg-primary">
+                  Cerrar Sesión
+                </a>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+  </header>
+  
+  <!-- Navigation -->
+  <nav class="bg-white shadow-sm">
+    <div class="container mx-auto">
+      <ul class="flex overflow-x-auto py-3 space-x-6 px-4 whitespace-nowrap">
+        <li><a href="javascript:void(0)" class="text-accent hover:text-accent/80 font-medium" @click="setCategory('todos')">Todos</a></li>
+        <li><a href="javascript:void(0)" class="text-gray-700 hover:text-accent font-medium" @click="setCategory('remeras')">Remeras</a></li>
+        <li><a href="javascript:void(0)" class="text-gray-700 hover:text-accent font-medium" @click="setCategory('buzos')">Buzos & Hoodies</a></li>
+        <li><a href="javascript:void(0)" class="text-gray-700 hover:text-accent font-medium" @click="setCategory('pantalones')">Pantalones</a></li>
+        <li><a href="javascript:void(0)" class="text-gray-700 hover:text-accent font-medium" @click="setCategory('accesorios')">Accesorios</a></li>
+        <li><a href="javascript:void(0)" class="text-gray-700 hover:text-accent font-medium" @click="setCategory('zapatillas')">Zapatillas</a></li>
+        <li><a href="javascript:void(0)" class="text-gray-700 hover:text-accent font-medium" @click="setCategory('ofertas')">Ofertas</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- Main Content Area -->
+  <main>
+    <!-- Hero Section -->
+    <section x-show="currentView === 'home'" class="hero py-16 mb-8">
+      <div class="container mx-auto px-4 text-center">
+        <h2 class="text-4xl md:text-5xl font-bold text-accent mb-6">Estilo Unico</h2>
+        <p class="text-xl text-gray-800 mb-8 max-w-2xl mx-auto">Descubre la nueva colección con diseños exclusivos para hombres.</p>
+        <button @click="scrollToProducts()" class="bg-accent hover:bg-accent/80 text-white px-8 py-3 rounded-full text-lg font-medium transition duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+          Explorar Colección
+        </button>
+      </div>
+    </section>
+
+    <!-- Products Section -->
+    <section id="products" class="py-8">
+      <div class="container mx-auto px-4">
+        <div class="flex justify-between items-center mb-8">
+          <h2 class="text-2xl font-bold text-accent" x-text="categoryTitle"></h2>
+          <div class="flex items-center space-x-2">
+            <label class="text-gray-700">Ordenar por:</label>
+            <select 
+              x-model="sortBy" 
+              @change="sortProducts()"
+              class="border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent"
+            >
+              <option value="recent">Más recientes</option>
+              <option value="price-low">Menor precio</option>
+              <option value="price-high">Mayor precio</option>
+              <option value="discount">Mejores ofertas</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Resultados de búsqueda -->
+        <div x-show="isSearching" class="mb-4 p-4 bg-blue-50 rounded-lg">
+          <div class="flex justify-between items-center">
+            <p class="text-accent font-medium">
+              <span x-text="searchResults.length"></span> resultados para "<span x-text="searchTerm"></span>"
+            </p>
+            <button @click="clearSearch()" class="text-gray-500 hover:text-accent">
+              <i class="fas fa-times mr-1"></i> Limpiar búsqueda
+            </button>
+          </div>
+        </div>
+
+        <div x-show="filteredProducts.length === 0" class="text-center py-8">
+          <div class="text-gray-500 mb-4">
+            <i class="fas fa-search text-5xl"></i>
+          </div>
+          <p class="text-xl text-gray-600" x-text="isSearching ? 'No se encontraron productos para tu búsqueda' : 'No hay productos disponibles en esta categoría'"></p>
+          <button x-show="isSearching" @click="clearSearch()" class="mt-4 bg-accent hover:bg-accent/80 text-white px-4 py-2 rounded transition duration-300">
+            Ver todos los productos
+          </button>
+        </div>
+        
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          <template x-for="product in filteredProducts" :key="product.id">
+            <div class="bg-white rounded-lg shadow-md overflow-hidden product-card transition duration-300">
+              <div class="relative h-60 overflow-hidden">
+                <img :src="product.image" :alt="product.name" class="w-full h-full object-cover">
+                <div class="absolute top-0 right-0 m-2" x-show="product.discount">
+                  <span class="bg-red-500 text-white text-sm font-bold px-2 py-1 rounded">-<span x-text="product.discount"></span>%</span>
+                </div>
+              </div>
+              <div class="p-4">
+                <h3 class="text-lg font-semibold text-gray-800 mb-1" x-text="product.name"></h3>
+                <p class="text-gray-600 text-sm mb-3" x-text="product.category"></p>
+                
+                <!-- Stock por sucursal -->
+                <div class="mb-3 text-xs text-gray-600">
+                  <div class="flex justify-between">
+                    <span>MAIPU: <span x-text="product.stock.maipu" class="font-semibold"></span></span>
+                    <span>LA RIOJA: <span x-text="product.stock.larioja" class="font-semibold"></span></span>
+                  </div>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                  <div>
+                    <template x-if="product.discount">
+                      <div class="flex items-center space-x-2">
+                        <span class="text-xl font-bold text-accent">$<span x-text="(product.price * (100 - product.discount) / 100).toFixed(2)"></span></span>
+                        <span class="text-sm text-gray-500 line-through">$<span x-text="product.price.toFixed(2)"></span></span>
+                      </div>
+                    </template>
+                    <template x-if="!product.discount">
+                      <span class="text-xl font-bold text-accent">$<span x-text="product.price.toFixed(2)"></span></span>
+                    </template>
+                  </div>
+                  <button @click="showProductDetail(product)" class="text-accent hover:text-accent/80" title="Ver detalles del producto">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="px-4 pb-4">
+                <button @click="addToCart(product)" class="w-full bg-accent hover:bg-accent/80 text-white py-2 rounded transition duration-300">
+                  <i class="fas fa-shopping-cart mr-2"></i> Añadir al carrito
+                </button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Profile Section -->
+    <section x-show="currentView === 'profile'" class="py-8">
+      <div class="container mx-auto px-4">
+        <h2 class="text-2xl font-bold text-accent mb-6">Mi Perfil</h2>
+        
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <div class="mb-6">
+            <h3 class="text-xl font-semibold mb-4">Información Personal</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-gray-700 mb-1">Email</label>
+                <p class="text-gray-900" x-text="currentUser?.email || ''"></p>
+              </div>
+              <div>
+                <label class="block text-gray-700 mb-1">Nombre</label>
+                <p class="text-gray-900" x-text="userProfile?.name || 'No especificado'"></p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-6">
+            <h3 class="text-xl font-semibold mb-4">Pedidos Recientes</h3>
+            <div x-show="orders.length === 0" class="text-gray-600 italic">
+              No tienes pedidos recientes
+            </div>
+            <div x-show="orders.length > 0" class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pedido #</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sucursal</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                  <template x-for="order in orders" :key="order.id">
+                    <tr>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="order.id"></td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="formatDate(order.date)"></td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$<span x-text="order.total.toFixed(2)"></span></td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <span :class="{
+                          'px-2 py-1 rounded text-xs font-semibold': true,
+                          'bg-yellow-100 text-yellow-800': order.status === 'Procesando',
+                          'bg-blue-100 text-blue-800': order.status === 'Enviado',
+                          'bg-green-100 text-green-800': order.status === 'Entregado'
+                        }" x-text="order.status"></span>
+                      </td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="order.sucursal"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    
+    <!-- Admin Panel -->
+    <section x-show="currentView === 'admin' && isAdmin" class="py-8">
+      <div class="container mx-auto px-4">
+        <div class="flex flex-col md:flex-row gap-6">
+          <!-- Admin Sidebar -->
+          <div class="w-full md:w-64 bg-white shadow rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-accent mb-4">Panel de Administración</h3>
+            <nav>
+              <ul class="space-y-2">
+                <li>
+                  <button 
+                    @click="adminSection = 'products'" 
+                    :class="{'bg-primary text-accent': adminSection === 'products', 'hover:bg-gray-100': adminSection !== 'products'}"
+                    class="w-full text-left px-4 py-2 rounded transition duration-200 flex items-center">
+                    <i class="fas fa-tshirt mr-2"></i> Productos
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    @click="adminSection = 'orders'" 
+                    :class="{'bg-primary text-accent': adminSection === 'orders', 'hover:bg-gray-100': adminSection !== 'orders'}"
+                    class="w-full text-left px-4 py-2 rounded transition duration-200 flex items-center">
+                    <i class="fas fa-shopping-bag mr-2"></i> Pedidos
+                  </button>
+                </li>
+                <li>
+                  <button 
+                    @click="adminSection = 'sucursales'" 
+                    :class="{'bg-primary text-accent': adminSection === 'sucursales', 'hover:bg-gray-100': adminSection !== 'sucursales'}"
+                    class="w-full text-left px-4 py-2 rounded transition duration-200 flex items-center">
+                    <i class="fas fa-store mr-2"></i> Sucursales
+                  </button>
+                </li>
+              </ul>
+            </nav>
+          </div>
+          
+          <!-- Admin Content -->
+          <div class="flex-1 bg-white shadow rounded-lg p-6">
+            <!-- Products Management -->
+            <div x-show="adminSection === 'products'">
+              <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-accent">Gestión de Productos</h2>
+                <button @click="showAddProductModal = true" class="bg-accent hover:bg-accent/80 text-white px-4 py-2 rounded transition duration-300 flex items-center">
+                  <i class="fas fa-plus mr-2"></i> Nuevo Producto
+                </button>
+              </div>
+              
+              <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Imagen</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoría</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Precio</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock Maipu</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock La Rioja</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-gray-200">
+                    <template x-for="product in products" :key="product.id">
+                      <tr>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                          <img :src="product.image" :alt="product.name" class="h-12 w-12 object-cover rounded">
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="product.name"></td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="product.category"></td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$<span x-text="product.price.toFixed(2)"></span></td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="product.stock.maipu"></td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900" x-text="product.stock.larioja"></td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                          <button @click="editProduct(product)" class="text-blue-600 hover:text-blue-900">
+                            <i class="fas fa-edit"></i>
+                          </button>
+                          <button @click="confirmDeleteProduct(product.id)" class="text-red-600 hover:text-red-900">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            
+            <!-- Orders Management -->
+            <div x-show="adminSection === 'orders'">
+              <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-accent">Gestión de Pedidos</h2>
+              </div>
+              
+              <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50">
+                    <tr>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pedido #</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                      <th class="px-6-py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Sucursal</th>
+                    </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-gray-200">
+                    <template x-for="order in adminOrders" :key="order.id">
+                      <tr>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900" x-text="order.id"></td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="order.customerEmail"></td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="formatDate(order.date)"></td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">$<span x-text="order.total.toFixed(2)"></span></td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                          <span :class="{
+                            'px-2 py-1 rounded text-xs font-semibold': true,
+                            'bg-yellow-100 text-yellow-800': order.status === 'Procesando',
+                            'bg-blue-100 text-blue-800': order.status === 'Enviado',
+                            'bg-green-100 text-green-800': order.status === 'Entregado'
+                          }" x-text="order.status"></span>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500" x-text="order.sucursal"></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Sucursales Management -->
+            <div x-show="adminSection === 'sucursales'">
+              <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-accent">Gestión de Sucursales</h2>
+              </div>
+              
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="bg-gray-50 p-6 rounded-lg">
+                  <h3 class="text-lg font-semibold text-accent mb-4">Popeye Maipu</h3>
+                  <p class="text-gray-600 mb-2"><i class="fas fa-map-marker-alt mr-2"></i>AV. MAIPU 1786</p>
+                  <p class="text-gray-600 mb-4"><i class="fas fa-phone mr-2"></i>3764-123456</p>
+                  <div class="bg-white p-4 rounded">
+                    <h4 class="font-semibold mb-2">Productos con stock bajo (< 5)</h4>
+                    <template x-for="product in lowStockProducts('maipu')" :key="product.id">
+                      <p class="text-sm text-red-600" x-text="`${product.name} - ${product.stock.maipu} unidades`"></p>
+                    </template>
+                  </div>
+                </div>
+                
+                <div class="bg-gray-50 p-6 rounded-lg">
+                  <h3 class="text-lg font-semibold text-accent mb-4">Popeye La Rioja</h3>
+                  <p class="text-gray-600 mb-2"><i class="fas fa-map-marker-alt mr-2"></i>LA RIOJA 1778</p>
+                  <p class="text-gray-600 mb-4"><i class="fas fa-phone mr-2"></i>3764-654321</p>
+                  <div class="bg-white p-4 rounded">
+                    <h4 class="font-semibold mb-2">Productos con stock bajo (< 5)</h4>
+                    <template x-for="product in lowStockProducts('larioja')" :key="product.id">
+                      <p class="text-sm text-red-600" x-text="`${product.name} - ${product.stock.larioja} unidades`"></p>
+                    </template>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Shopping Cart Drawer -->
+  <div class="fixed inset-y-0 right-0 w-full sm:w-96 bg-white shadow-lg z-50 overflow-y-auto cart-drawer" :class="cartOpen ? 'open' : 'closed'">
+    <div class="p-6">
+      <div class="flex justify-between items-center mb-6">
+        <h2 class="text-xl font-bold text-accent">Carrito de Compras</h2>
+        <button @click="toggleCart()" class="text-gray-500 hover:text-accent">
+          <i class="fas fa-times text-xl"></i>
+        </button>
+      </div>
+      
+      <div x-show="cart.items.length === 0" class="text-center py-8">
+        <div class="text-gray-400 mb-4">
+          <i class="fas fa-shopping-cart text-5xl"></i>
+        </div>
+        <p class="text-gray-600">Tu carrito está vacío</p>
+        <button @click="toggleCart(); scrollToProducts()" class="mt-4 bg-accent hover:bg-accent/80 text-white px-4 py-2 rounded transition duration-300">
+          Continuar Comprando
+        </button>
+      </div>
+      
+      <div x-show="cart.items.length > 0">
+        <!-- Selección de sucursal -->
+        <div class="mb-6 p-4 bg-gray-50 rounded-lg">
+          <h3 class="font-semibold text-gray-800 mb-2">Seleccionar sucursal para retiro:</h3>
+          <select x-model="selectedSucursal" class="w-full px-3 py-2 border rounded focus:outline-none focus:ring-1 focus:ring-accent">
+            <option value="maipu">Popeye Maipu (AV. MAIPU 1786)</option>
+            <option value="larioja">Popeye La Rioja (LA RIOJA 1778)</option>
+            <option value="delivery">Envío a domicilio</option>
+          </select>
+        </div>
+        
+        <div class="space-y-4 mb-6">
+          <template x-for="(item, index) in cart.items" :key="index">
+            <div class="flex border-b pb-4">
+              <img :src="item.image" :alt="item.name" class="w-20 h-20 object-cover rounded">
+              <div class="flex-1 ml-4">
+                <div class="flex justify-between">
+                  <h3 class="text-gray-800 font-medium" x-text="item.name"></h3>
+                  <button @click="removeFromCart(index)" class="text-gray-400 hover:text-red-500">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                </div>
+                <div class="flex justify-between items-center mt-2">
+                  <div class="flex items-center border rounded">
+                    <button @click="decrementQuantity(index)" class="px-2 py-1 text-gray-600 hover:bg-gray-100">-</button>
+                    <span class="px-2 py-1" x-text="item.quantity"></span>
+                    <button @click="incrementQuantity(index)" class="px-2 py-1 text-gray-600 hover:bg-gray-100">+</button>
+                  </div>
+                  <p class="text-accent font-semibold">$<span x-text="(item.price * item.quantity).toFixed(2)"></span></p>
+                </div>
+              </div>
+            </div>
+          </template>
+        </div>
+        
+        <div class="border-t py-4">
+          <div class="flex justify-between mb-2">
+            <span>Subtotal</span>
+            <span class="font-semibold">$<span x-text="calculateSubtotal().toFixed(2)"></span></span>
+          </div>
+          <div class="flex justify-between mb-2">
+            <span>Envío</span>
+            <span class="font-semibold" x-text="selectedSucursal === 'delivery' ? '$5.99' : 'Gratis'"></span>
+          </div>
+          <div class="flex justify-between font-bold text-lg mt-4">
+            <span>Total</span>
+            <span class="text-accent">$<span x-text="(calculateSubtotal() + (selectedSucursal === 'delivery' ? 5.99 : 0)).toFixed(2)"></span></span>
+          </div>
+        </div>
+        
+        <div class="mt-6">
+          <button @click="checkout()" class="w-full bg-accent hover:bg-accent/80 text-white py-3 rounded-lg font-medium transition duration-300">
+            Proceder al Pago
+          </button>
+          <button @click="toggleCart(); scrollToProducts()" class="w-full mt-3 border border-accent text-accent hover:bg-accent/10 py-3 rounded-lg font-medium transition duration-300">
+            Continuar Comprando
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Product Detail Modal -->
+  <div x-show="showProductModal" class="fixed inset-0 z-50 overflow-y-auto modal-overlay" style="display: none;">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="fixed inset-0 bg-black opacity-40" @click="showProductModal = false"></div>
+      
+      <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full z-10 modal-content">
+        <div class="flex justify-between items-center p-6 border-b">
+          <h2 class="text-2xl font-bold text-accent" x-text="selectedProduct.name"></h2>
+          <button @click="showProductModal = false" class="text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+        
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <img :src="selectedProduct.image" :alt="selectedProduct.name" class="w-full h-64 object-cover rounded-lg">
+            </div>
+            <div>
+              <p class="text-gray-600 mb-4" x-text="selectedProduct.description"></p>
+              
+              <div class="mb-4">
+                <h3 class="font-semibold text-gray-800 mb-2">Stock disponible:</h3>
+                <div class="flex justify-between text-sm">
+                  <span>AV. MAIPU 1786: <span class="font-semibold" x-text="selectedProduct.stock?.maipu || 0"></span></span>
+                  <span>LA RIOJA 1778: <span class="font-semibold" x-text="selectedProduct.stock?.larioja || 0"></span></span>
+                </div>
+              </div>
+              
+              <div class="mb-6">
+                <template x-if="selectedProduct.discount">
+                  <div class="flex items-center space-x-2 mb-2">
+                    <span class="text-2xl font-bold text-accent">$<span x-text="(selectedProduct.price * (100 - selectedProduct.discount) / 100).toFixed(2)"></span></span>
+                    <span class="text-lg text-gray-500 line-through">$<span x-text="selectedProduct.price.toFixed(2)"></span></span>
+                    <span class="bg-red-500 text-white text-sm font-bold px-2 py-1 rounded">-<span x-text="selectedProduct.discount"></span>%</span>
+                  </div>
+                </template>
+                <template x-if="!selectedProduct.discount">
+                  <span class="text-2xl font-bold text-accent">$<span x-text="selectedProduct.price.toFixed(2)"></span></span>
+                </template>
+              </div>
+              
+              <button @click="addToCart(selectedProduct); showProductModal = false" class="w-full bg-accent hover:bg-accent/80 text-white py-3 rounded-lg font-medium transition duration-300">
+                <i class="fas fa-shopping-cart mr-2"></i> Añadir al carrito
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login Modal -->
+  <div x-show="showLoginModal" class="fixed inset-0 z-50 overflow-y-auto modal-overlay" style="display: none;">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="fixed inset-0 bg-black opacity-40" @click="showLoginModal = false"></div>
+      
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full z-10 modal-content">
+        <div class="flex justify-between items-center p-6 border-b">
+          <h2 class="text-2xl font-bold text-accent">Iniciar Sesión</h2>
+          <button @click="showLoginModal = false" class="text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+        
+        <div class="p-6">
+          <form @submit.prevent="login()">
+            <div class="mb-4">
+              <label for="email" class="block text-gray-700 mb-2">Email</label>
+              <input type="email" id="email" x-model="loginForm.email" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent" required>
+            </div>
+            <div class="mb-6">
+              <label for="password" class="block text-gray-700 mb-2">Contraseña</label>
+              <input type="password" id="password" x-model="loginForm.password" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent" required>
+            </div>
+            <div class="mb-6">
+              <button type="submit" class="w-full bg-accent hover:bg-accent/80 text-white py-2 rounded-lg transition duration-300">
+                Iniciar Sesión
+              </button>
+            </div>
+          </form>
+          
+          <p class="text-center text-gray-600">
+            ¿No tienes una cuenta? 
+            <a href="javascript:void(0)" @click="showRegisterModal = true; showLoginModal = false" class="text-accent hover:underline">Regístrate</a>
+          </p>
+
+          <!-- Credenciales de demo -->
+          <div class="mt-6 p-4 bg-gray-100 rounded-lg">
+            <p class="text-sm text-gray-600 mb-2"><strong>Demo Admin:</strong> admin@popeye.com / admin123</p>
+            <p class="text-sm text-gray-600"><strong>Demo Usuario:</strong> usuario@popeye.com / usuario123</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Register Modal -->
+  <div x-show="showRegisterModal" class="fixed inset-0 z-50 overflow-y-auto modal-overlay" style="display: none;">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="fixed inset-0 bg-black opacity-40" @click="showRegisterModal = false"></div>
+      
+      <div class="bg-white rounded-lg shadow-xl max-w-md w-full z-10 modal-content">
+        <div class="flex justify-between items-center p-6 border-b">
+          <h2 class="text-2xl font-bold text-accent">Crear Cuenta</h2>
+          <button @click="showRegisterModal = false" class="text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+        
+        <div class="p-6">
+          <form @submit.prevent="register()">
+            <div class="mb-4">
+              <label for="register_name" class="block text-gray-700 mb-2">Nombre Completo</label>
+              <input type="text" id="register_name" x-model="registerForm.name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent" required>
+            </div>
+            <div class="mb-4">
+              <label for="register_email" class="block text-gray-700 mb-2">Email</label>
+              <input type="email" id="register_email" x-model="registerForm.email" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent" required>
+            </div>
+            <div class="mb-4">
+              <label for="register_password" class="block text-gray-700 mb-2">Contraseña</label>
+              <input type="password" id="register_password" x-model="registerForm.password" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent" required>
+            </div>
+            <div class="mb-6">
+              <label for="register_confirm_password" class="block text-gray-700 mb-2">Confirmar Contraseña</label>
+              <input type="password" id="register_confirm_password" x-model="registerForm.confirmPassword" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent" required>
+            </div>
+            <div class="mb-6">
+              <button type="submit" class="w-full bg-accent hover:bg-accent/80 text-white py-2 rounded-lg transition duration-300">
+                Crear Cuenta
+              </button>
+            </div>
+          </form>
+          
+          <p class="text-center text-gray-600">
+            ¿Ya tienes una cuenta? 
+            <a href="javascript:void(0)" @click="showLoginModal = true; showRegisterModal = false" class="text-accent hover:underline">Iniciar Sesión</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Product Modal -->
+  <div x-show="showAddProductModal" class="fixed inset-0 z-50 overflow-y-auto modal-overlay" style="display: none;">
+    <div class="flex items-center justify-center min-h-screen p-4">
+      <div class="fixed inset-0 bg-black opacity-40" @click="showAddProductModal = false"></div>
+      
+      <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full z-10 modal-content">
+        <div class="flex justify-between items-center p-6 border-b">
+          <h2 class="text-2xl font-bold text-accent">Añadir Nuevo Producto</h2>
+          <button @click="showAddProductModal = false" class="text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+        
+        <div class="p-6">
+          <form @submit.prevent="saveProduct()">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label for="product_name" class="block text-gray-700 mb-2">Nombre del Producto</label>
+                <input type="text" id="product_name" x-model="productForm.name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent" required>
+              </div>
+              <div>
+                <label for="product_category" class="block text-gray-700 mb-2">Categoría</label>
+                <select id="product_category" x-model="productForm.category" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent" required>
+                  <option value="">Seleccionar categoría</option>
+                  <option value="remeras">Remeras</option>
+                  <option value="buzos">Buzos & Hoodies</option>
+                  <option value="pantalones">Pantalones</option>
+                  <option value="accesorios">Accesorios</option>
+                  <option value="zapatillas">Zapatillas</option>
+                </select>
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label for="product_price" class="block text-gray-700 mb-2">Precio</label>
+                <input type="number" id="product_price" x-model="productForm.price" min="0" step="0.01" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent" required>
+              </div>
+              <div>
+                <label for="product_discount" class="block text-gray-700 mb-2">Descuento (%)</label>
+                <input type="number" id="product_discount" x-model="productForm.discount" min="0" max="100" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent">
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label for="product_stock_maipu" class="block text-gray-700 mb-2">Stock Maipu</label>
+                <input type="number" id="product_stock_maipu" x-model="productForm.stockMaipu" min="0" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent" required>
+              </div>
+              <div>
+                <label for="product_stock_larioja" class="block text-gray-700 mb-2">Stock La Rioja</label>
+                <input type="number" id="product_stock_larioja" x-model="productForm.stockLaRioja" min="0" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent" required>
+              </div>
+            </div>
+            
+            <div class="mb-4">
+              <label for="product_description" class="block text-gray-700 mb-2">Descripción</label>
+              <textarea id="product_description" x-model="productForm.description" rows="4" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent"></textarea>
+            </div>
+            
+            <div class="mb-6">
+              <label class="block text-gray-700 mb-2">Imagen del Producto (URL)</label>
+              <input type="text" x-model="productForm.image" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-accent" placeholder="https://ejemplo.com/imagen.jpg">
+            </div>
+            
+            <div class="flex justify-end space-x-4">
+              <button type="button" @click="showAddProductModal = false" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition duration-300">
+                Cancelar
+              </button>
+              <button type="submit" class="px-6 py-2 bg-accent hover:bg-accent/80 text-white rounded-lg transition duration-300">
+                Guardar Producto
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function appData() {
+      return {
+        // Application state
+        currentView: 'home',
+        loading: false,
+        toast: {
+          visible: false,
+          message: '',
+          type: 'success'
+        },
+        
+        // Search functionality
+        searchTerm: '',
+        isSearching: false,
+        searchResults: [],
+        
+        // User authentication
+        currentUser: null,
+        isAdmin: false,
+        
+        // Login/register
+        showLoginModal: false,
+        showRegisterModal: false,
+        loginForm: {
+          email: '',
+          password: ''
+        },
+        registerForm: {
+          name: '',
+          email: '',
+          password: '',
+          confirmPassword: ''
+        },
+        
+        // Products
+        products: [
+          {
+            id: 1,
+            name: "Remera Básica Negra",
+            category: "remeras",
+            price: 4500,
+            discount: 10,
+            stock: {
+              maipu: 25,
+              larioja: 18
+            },
+            image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            description: "Remera básica de algodón 100% en color negro. Corte clásico y cómodo."
+          },
+          {
+            id: 2,
+            name: "Remera Estampada Náutica",
+            category: "remeras",
+            price: 5200,
+            discount: 0,
+            stock: {
+              maipu: 15,
+              larioja: 12
+            },
+            image: "https://images.unsplash.com/photo-1503342217505-b0a15ec3261c?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            description: "Remera con estampado náutico exclusivo de Popeye."
+          },
+          {
+            id: 3,
+            name: "Remera Manga Larga Blanca",
+            category: "remeras",
+            price: 6800,
+            discount: 15,
+            stock: {
+              maipu: 8,
+              larioja: 10
+            },
+            image: "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            description: "Remera de manga larga en algodón pique. Ideal para temporada otoño-invierno."
+          },
+          {
+            id: 4,
+            name: "Hoodie Popeye Classic",
+            category: "buzos",
+            price: 12900,
+            discount: 0,
+            stock: {
+              maipu: 12,
+              larioja: 8
+            },
+            image: "https://images.unsplash.com/photo-1556821840-3a63f95609a7?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            description: "Hoodie clásico con capucha y bolsillo tipo canguro. Calidad premium."
+          },
+          {
+            id: 5,
+            name: "Buzo Canguro Gris",
+            category: "buzos",
+            price: 8900,
+            discount: 20,
+            stock: {
+              maipu: 7,
+              larioja: 9
+            },
+            image: "https://images.unsplash.com/photo-1578763363221-1a5ae3c11bc4?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            description: "Buzo canguro en frisa de algodón. Cómodo y versátil."
+          },
+          {
+            id: 6,
+            name: "Hoodie Oversized Negro",
+            category: "buzos",
+            price: 14200,
+            discount: 10,
+            stock: {
+              maipu: 5,
+              larioja: 6
+            },
+            image: "https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            description: "Hoodie oversized de corte moderno. Perfecto para looks urbanos."
+          },
+          {
+            id: 7,
+            name: "Jean Slim Fit Azul",
+            category: "pantalones",
+            price: 14500,
+            discount: 15,
+            stock: {
+              maipu: 10,
+              larioja: 7
+            },
+            image: "https://images.unsplash.com/photo-1542272604-787c3835535d?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            description: "Jean slim fit en color azul clásico. Tiro medio y ajuste perfecto."
+          },
+          {
+            id: 8,
+            name: "Jogger Deportivo Negro",
+            category: "pantalones",
+            price: 7800,
+            discount: 0,
+            stock: {
+              maipu: 18,
+              larioja: 15
+            },
+            image: "https://images.unsplash.com/photo-1506629905607-e48b0e67d879?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            description: "Jogger deportivo con cintura elastizada. Ideal para entrenar o uso casual."
+          },
+          {
+            id: 9,
+            name: "Pantalón Cargo Beige",
+            category: "pantalones",
+            price: 11200,
+            discount: 25,
+            stock: {
+              maipu: 6,
+              larioja: 4
+            },
+            image: "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            description: "Pantalón cargo con múltiples bolsillos. Práctico y con estilo militar."
+          },
+          {
+            id: 10,
+            name: "Gorra Popeye Negra",
+            category: "accesorios",
+            price: 3500,
+            discount: 0,
+            stock: {
+              maipu: 30,
+              larioja: 25
+            },
+            image: "https://images.unsplash.com/photo-1588850561407-ed78c282e89b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            description: "Gorra trucker con logo Popeye bordado. Ajuste regulable."
+          },
+          {
+            id: 11,
+            name: "Mochila Urbana",
+            category: "accesorios",
+            price: 8900,
+            discount: 10,
+            stock: {
+              maipu: 8,
+              larioja: 6
+            },
+            image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            description: "Mochila urbana con compartimentos múltiples. Resistente al agua."
+          },
+          {
+            id: 12,
+            name: "Riñonera Deportiva",
+            category: "accesorios",
+            price: 4200,
+            discount: 15,
+            stock: {
+              maipu: 12,
+              larioja: 10
+            },
+            image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            description: "Riñonera deportiva con múltiples bolsillos. Ideal para running o paseos."
+          },
+          {
+            id: 13,
+            name: "Zapatillas Urbanas Blancas",
+            category: "zapatillas",
+            price: 18900,
+            discount: 0,
+            stock: {
+              maipu: 9,
+              larioja: 7
+            },
+            image: "https://images.unsplash.com/photo-1549298916-b41d501d3772?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            description: "Zapatillas urbanas en cuero sintético. Suela de goma antideslizante."
+          },
+          {
+            id: 14,
+            name: "Zapatillas Running Negras",
+            category: "zapatillas",
+            price: 16700,
+            discount: 20,
+            stock: {
+              maipu: 6,
+              larioja: 8
+            },
+            image: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            description: "Zapatillas técnicas para running. Amortiguación superior y transpirable."
+          },
+          {
+            id: 15,
+            name: "Zapatillas Casual Skate",
+            category: "zapatillas",
+            price: 14200,
+            discount: 10,
+            stock: {
+              maipu: 11,
+              larioja: 9
+            },
+            image: "https://images.unsplash.com/photo-1606107557195-0e29a4b5b4aa?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80",
+            description: "Zapatillas estilo skate con suela resistente. Diseño urbano y duradero."
+          }
+        ],
+        filteredProducts: [],
+        currentCategory: 'todos',
+        categoryTitle: 'Todos los Productos',
+        sortBy: 'recent',
+        
+        // Shopping cart
+        cartOpen: false,
+        cart: {
+          items: []
+        },
+        selectedSucursal: 'maipu',
+        
+        // Product detail
+        showProductModal: false,
+        selectedProduct: {},
+        
+        // Admin panel
+        adminSection: 'products',
+        showAddProductModal: false,
+        isEditingProduct: false,
+        productForm: {
+          name: '',
+          category: '',
+          price: 0,
+          discount: 0,
+          stockMaipu: 0,
+          stockLaRioja: 0,
+          description: '',
+          image: ''
+        },
+        
+        // Profile
+        userProfile: null,
+        orders: [],
+        
+        // Admin data
+        adminOrders: [
+          {
+            id: 'ORD-001',
+            customerEmail: 'cliente@ejemplo.com',
+            date: new Date('2024-01-15'),
+            total: 13400,
+            status: 'Entregado',
+            sucursal: 'maipu'
+          },
+          {
+            id: 'ORD-002',
+            customerEmail: 'cliente2@ejemplo.com',
+            date: new Date('2024-01-18'),
+            total: 8900,
+            status: 'Procesando',
+            sucursal: 'larioja'
+          }
+        ],
+        
+        // Initialize app
+        init() {
+          this.loadProducts();
+          this.loadCart();
+          this.checkCurrentUser();
+        },
+        
+        // SEARCH METHODS
+        performSearch() {
+          if (this.searchTerm.trim() === '') {
+            this.clearSearch();
+            return;
+          }
+          
+          this.isSearching = true;
+          const term = this.searchTerm.toLowerCase().trim();
+          
+          // Search in product name, category and description
+          this.searchResults = this.products.filter(product => 
+            product.name.toLowerCase().includes(term) ||
+            product.category.toLowerCase().includes(term) ||
+            (product.description && product.description.toLowerCase().includes(term))
+          );
+          
+          this.filteredProducts = this.searchResults;
+          this.sortProducts();
+          this.categoryTitle = `Resultados de búsqueda: "${this.searchTerm}"`;
+          
+          // Scroll to products section
+          this.scrollToProducts();
+        },
+        
+        clearSearch() {
+          this.searchTerm = '';
+          this.isSearching = false;
+          this.searchResults = [];
+          this.filterProductsByCategory();
+          // Aplicar ordenamiento después de limpiar búsqueda
+          this.sortProducts();
+        },
+        
+        // AUTHENTICATION METHODS
+        checkCurrentUser() {
+          // Start with no user
+          this.currentUser = null;
+          this.isAdmin = false;
+        },
+        
+        login() {
+          this.loading = true;
+          
+          // Simulating login - INCLUDING ADMIN
+          setTimeout(() => {
+            // Check for admin login
+            if (this.loginForm.email === 'admin@popeye.com' && this.loginForm.password === 'admin123') {
+              this.currentUser = { 
+                email: 'admin@popeye.com', 
+                uid: 'admin123',
+                name: 'Administrador Popeye'
+              };
+              this.isAdmin = true;
+              this.showToast('Inicio de sesión exitoso como administrador', 'success');
+            } 
+            // Check for regular user login
+            else if (this.loginForm.email === 'usuario@popeye.com' && this.loginForm.password === 'usuario123') {
+              this.currentUser = { 
+                email: 'usuario@popeye.com', 
+                uid: 'user123',
+                name: 'Cliente Demo'
+              };
+              this.isAdmin = false;
+              this.showToast('Inicio de sesión exitoso', 'success');
+            }
+            // Regular user registration simulation
+            else {
+              this.currentUser = { 
+                email: this.loginForm.email, 
+                uid: 'user' + Date.now(),
+                name: 'Nuevo Usuario'
+              };
+              this.isAdmin = false;
+              this.showToast('Inicio de sesión exitoso', 'success');
+            }
+            
+            this.showLoginModal = false;
+            this.loading = false;
+            this.loadUserProfile();
+            
+            // Reset form
+            this.loginForm = {
+              email: '',
+              password: ''
+            };
+          }, 1000);
+        },
+        
+        register() {
+          if (this.registerForm.password !== this.registerForm.confirmPassword) {
+            this.showToast('Las contraseñas no coinciden', 'error');
+            return;
+          }
+          
+          this.loading = true;
+          
+          setTimeout(() => {
+            this.currentUser = { 
+              email: this.registerForm.email, 
+              uid: 'user' + Date.now(),
+              name: this.registerForm.name
+            };
+            this.isAdmin = false;
+            this.showToast('Registro exitoso', 'success');
+            this.showRegisterModal = false;
+            this.loading = false;
+            
+            // Create default profile
+            this.userProfile = {
+              name: this.registerForm.name,
+              email: this.registerForm.email
+            };
+            
+            // Reset form
+            this.registerForm = {
+              name: '',
+              email: '',
+              password: '',
+              confirmPassword: ''
+            };
+          }, 1000);
+        },
+        
+        logout() {
+          this.loading = true;
+          
+          setTimeout(() => {
+            this.currentUser = null;
+            this.isAdmin = false;
+            this.userProfile = null;
+            this.currentView = 'home';
+            this.showToast('Sesión cerrada exitosamente', 'success');
+            this.loading = false;
+          }, 500);
+        },
+        
+        loadUserProfile() {
+          this.userProfile = {
+            name: this.currentUser?.name || 'Usuario',
+            email: this.currentUser?.email,
+            phone: '+54 3764 123456',
+            address: {
+              street: 'Calle Ejemplo 123',
+              city: 'Posadas',
+              zipCode: '3300',
+              country: 'Argentina'
+            }
+          };
+          
+          this.loadOrders();
+        },
+        
+        // NAVIGATION METHODS
+        showProfile() {
+          this.currentView = 'profile';
+          if (this.userProfile === null) {
+            this.loadUserProfile();
+          }
+        },
+        
+        showAdminPanel() {
+          this.currentView = 'admin';
+          this.adminSection = 'products';
+        },
+        
+        setCategory(category) {
+          this.currentCategory = category;
+          this.updateCategoryTitle();
+          this.filterProductsByCategory();
+        },
+        
+        updateCategoryTitle() {
+          const titles = {
+            'todos': 'Todos los Productos',
+            'remeras': 'Remeras',
+            'buzos': 'Buzos & Hoodies',
+            'pantalones': 'Pantalones',
+            'accesorios': 'Accesorios',
+            'zapatillas': 'Zapatillas',
+            'ofertas': 'Ofertas Especiales'
+          };
+          this.categoryTitle = titles[this.currentCategory] || 'Productos';
+        },
+        
+        // PRODUCTS METHODS
+        loadProducts() {
+          this.filteredProducts = [...this.products];
+          this.updateCategoryTitle();
+        },
+        
+        filterProductsByCategory() {
+          if (this.currentCategory === 'todos') {
+            this.filteredProducts = [...this.products];
+          } else if (this.currentCategory === 'ofertas') {
+            this.filteredProducts = this.products.filter(product => product.discount > 0);
+          } else {
+            this.filteredProducts = this.products.filter(product => product.category === this.currentCategory);
+          }
+          
+          // Aplicar el ordenamiento actual después de filtrar
+          this.sortProducts();
+        },
+        
+        // SORTING METHODS
+        sortProducts() {
+          const productsToSort = [...this.filteredProducts];
+          
+          switch (this.sortBy) {
+            case 'price-low':
+              this.filteredProducts = productsToSort.sort((a, b) => {
+                const priceA = a.discount > 0 ? a.price * (100 - a.discount) / 100 : a.price;
+                const priceB = b.discount > 0 ? b.price * (100 - b.discount) / 100 : b.price;
+                return priceA - priceB;
+              });
+              break;
+              
+            case 'price-high':
+              this.filteredProducts = productsToSort.sort((a, b) => {
+                const priceA = a.discount > 0 ? a.price * (100 - a.discount) / 100 : a.price;
+                const priceB = b.discount > 0 ? b.price * (100 - b.discount) / 100 : b.price;
+                return priceB - priceA;
+              });
+              break;
+              
+            case 'discount':
+              this.filteredProducts = productsToSort.sort((a, b) => {
+                return (b.discount || 0) - (a.discount || 0);
+              });
+              break;
+              
+            case 'recent':
+            default:
+              // Mantener el orden original (como están en el array)
+              this.filteredProducts = [...this.products].filter(product => {
+                if (this.currentCategory === 'todos') return true;
+                if (this.currentCategory === 'ofertas') return product.discount > 0;
+                return product.category === this.currentCategory;
+              });
+              break;
+          }
+        },
+        
+        showProductDetail(product) {
+          this.selectedProduct = product;
+          this.showProductModal = true;
+        },
+        
+        scrollToProducts() {
+          document.getElementById('products').scrollIntoView({ behavior: 'smooth' });
+        },
+        
+        // CART METHODS
+        toggleCart() {
+          this.cartOpen = !this.cartOpen;
+        },
+        
+        addToCart(product) {
+          const cartItem = {
+            id: product.id,
+            name: product.name,
+            price: product.discount > 0 ? product.price * (100 - product.discount) / 100 : product.price,
+            image: product.image,
+            quantity: 1
+          };
+          
+          this.cart.items.push(cartItem);
+          this.saveCart();
+          this.showToast(`${product.name} añadido al carrito`, 'success');
+        },
+        
+        removeFromCart(index) {
+          this.cart.items.splice(index, 1);
+          this.saveCart();
+          this.showToast('Producto eliminado del carrito', 'success');
+        },
+        
+        incrementQuantity(index) {
+          this.cart.items[index].quantity++;
+          this.saveCart();
+        },
+        
+        decrementQuantity(index) {
+          if (this.cart.items[index].quantity > 1) {
+            this.cart.items[index].quantity--;
+            this.saveCart();
+          }
+        },
+        
+        calculateSubtotal() {
+          return this.cart.items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        },
+        
+        saveCart() {
+          localStorage.setItem('popeye_cart', JSON.stringify(this.cart));
+        },
+        
+        loadCart() {
+          const savedCart = localStorage.getItem('popeye_cart');
+          if (savedCart) {
+            this.cart = JSON.parse(savedCart);
+          }
+        },
+        
+        checkout() {
+          if (!this.currentUser) {
+            this.showLoginModal = true;
+            this.showToast('Por favor inicia sesión para continuar con la compra', 'error');
+            return;
+          }
+          
+          this.toggleCart();
+          this.loading = true;
+          
+          setTimeout(() => {
+            const orderId = 'ORD-' + Date.now();
+            
+            // Add to user orders
+            this.orders.unshift({
+              id: orderId,
+              date: new Date(),
+              items: [...this.cart.items],
+              total: this.calculateSubtotal() + (this.selectedSucursal === 'delivery' ? 5.99 : 0),
+              status: 'Procesando',
+              sucursal: this.selectedSucursal
+            });
+            
+            // Add to admin orders
+            this.adminOrders.unshift({
+              id: orderId,
+              customerEmail: this.currentUser.email,
+              date: new Date(),
+              total: this.calculateSubtotal() + (this.selectedSucursal === 'delivery' ? 5.99 : 0),
+              status: 'Procesando',
+              sucursal: this.selectedSucursal
+            });
+            
+            // Update stock (simulation)
+            this.cart.items.forEach(item => {
+              const product = this.products.find(p => p.id === item.id);
+              if (product && this.selectedSucursal !== 'delivery') {
+                product.stock[this.selectedSucursal] -= item.quantity;
+                if (product.stock[this.selectedSucursal] < 0) {
+                  product.stock[this.selectedSucursal] = 0;
+                }
+              }
+            });
+            
+            this.cart.items = [];
+            this.saveCart();
+            this.loading = false;
+            this.showToast('¡Pedido realizado con éxito! Número: ' + orderId, 'success');
+          }, 2000);
+        },
+        
+        // ADMIN METHODS
+        saveProduct() {
+          this.loading = true;
+          
+          setTimeout(() => {
+            if (this.isEditingProduct) {
+              // Update existing product
+              const index = this.products.findIndex(p => p.id === this.productForm.id);
+              if (index !== -1) {
+                this.products[index] = {
+                  ...this.productForm,
+                  stock: {
+                    maipu: parseInt(this.productForm.stockMaipu),
+                    larioja: parseInt(this.productForm.stockLaRioja)
+                  }
+                };
+              }
+              this.showToast('Producto actualizado correctamente', 'success');
+            } else {
+              // Add new product
+              const newProduct = {
+                id: Math.max(...this.products.map(p => p.id)) + 1,
+                name: this.productForm.name,
+                category: this.productForm.category,
+                price: parseFloat(this.productForm.price),
+                discount: parseInt(this.productForm.discount) || 0,
+                stock: {
+                  maipu: parseInt(this.productForm.stockMaipu),
+                  larioja: parseInt(this.productForm.stockLaRioja)
+                },
+                description: this.productForm.description,
+                image: this.productForm.image || 'https://images.unsplash.com/photo-1567401893414-76b7b1e5a7a5?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80'
+              };
+              this.products.unshift(newProduct);
+              this.showToast('Producto añadido correctamente', 'success');
+            }
+            
+            this.showAddProductModal = false;
+            this.isEditingProduct = false;
+            this.productForm = {
+              name: '',
+              category: '',
+              price: 0,
+              discount: 0,
+              stockMaipu: 0,
+              stockLaRioja: 0,
+              description: '',
+              image: ''
+            };
+            
+            this.filterProductsByCategory();
+            this.loading = false;
+          }, 1500);
+        },
+        
+        editProduct(product) {
+          this.productForm = { 
+            ...product,
+            id: product.id,
+            stockMaipu: product.stock.maipu,
+            stockLaRioja: product.stock.larioja
+          };
+          this.isEditingProduct = true;
+          this.showAddProductModal = true;
+        },
+        
+        confirmDeleteProduct(productId) {
+          if (confirm('¿Estás seguro de que deseas eliminar este producto?')) {
+            this.products = this.products.filter(p => p.id !== productId);
+            this.filterProductsByCategory();
+            this.showToast('Producto eliminado correctamente', 'success');
+          }
+        },
+        
+        lowStockProducts(sucursal) {
+          return this.products.filter(product => product.stock[sucursal] < 5);
+        },
+        
+        // ORDERS METHODS
+        loadOrders() {
+          this.orders = [
+            {
+              id: 'ORD-001',
+              date: new Date('2024-01-10'),
+              items: [
+                { name: 'Remera Básica Negra', quantity: 2, price: 4050 }
+              ],
+              total: 8100,
+              status: 'Entregado',
+              sucursal: 'maipu'
+            }
+          ];
+        },
+        
+        // UTILITY METHODS
+        formatDate(dateObj) {
+          if (!dateObj) return '';
+          
+          if (typeof dateObj === 'string') {
+            dateObj = new Date(dateObj);
+          }
+          
+          return dateObj.toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+          });
+        },
+        
+        showToast(message, type) {
+          this.toast.message = message;
+          this.toast.type = type;
+          this.toast.visible = true;
+          
+          setTimeout(() => {
+            this.toast.visible = false;
+          }, 3000);
+        }
+      };
+    }
+  </script>
+</body>
+</html>
